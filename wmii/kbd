@@ -1,0 +1,3 @@
+#!/bin/bash
+setxkbmap -model pc104 -layout us,ru -option lv3:ralt_switch,grp:caps_toggle,misc:typo,grp_led:caps,shift:breaks_caps
+xset r rate 350

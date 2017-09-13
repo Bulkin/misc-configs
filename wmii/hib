@@ -1,0 +1,22 @@
+#!/bin/bash
+
+sudo killall -9 skype
+sudo killall -9 updatedb
+killall bitcoind
+sudo drop_caches
+#sudo swapon /dev/sda3
+#sudo swapoff /dev/sdb6
+sleep 3
+sudo hibernate
+
+#sudo swapon /dev/sdb6
+#sudo swapoff /dev/sda3
+
+#bitcoind -daemon
+#sudo chvt $1
+#sudo /etc/init.d/pulseaudio restart
+
+xset +dpms
+
+sleep 5
+#/home/bulkin/bin/skype_b &

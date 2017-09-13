@@ -1,0 +1,5 @@
+#!/bin/sh
+
+xset -dpms 
+sleep 7200
+xset +dpms

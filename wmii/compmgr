@@ -1,0 +1,5 @@
+#!/bin/sh
+
+if ! killall xcompmgr ; then
+	composite
+fi

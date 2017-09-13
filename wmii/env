@@ -1,0 +1,10 @@
+#!/bin/sh
+
+export PATH=PATH:/usr/games/bin
+export PATH=PATH:~/bin
+
+export WMII_ADDRESS=unix\!/tmp/ns.bulkin.\:0/wmii
+
+#export PYTHONPATH=/usr/lib/python2.5
+export MPD_HOST=127.0.0.1
+export SDL_AUDIODRIVER=pulse

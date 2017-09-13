@@ -1,0 +1,152 @@
+MODKEY=Mod4
+
+# Colors tuples: "<text> <background> <border>"
+WMII_NORMCOLORS='#888888 #222222 #333333'
+WMII_FOCUSCOLORS='#ffffff #285577 #4c7899'
+
+WMII_BACKGROUND='#333333'
+WMII_FONT='-xos4-terminus-medium-*-normal-*-14-*-*-*-*-*-*-*'
+
+set -- $(echo $WMII_NORMCOLORS $WMII_FOCUSCOLORS)
+WMII_MENU="dmenu -fn '$WMII_FONT' -nf '$1' -nb '$2' -sf '$4' -sb '$5'"
+WMII_9MENU="wmii9menu -font '$WMII_FONT' -nf '$1' -nb '$2' -sf '$4' -sb '$5' -br '$6'"
+WMII_TERM="xterm"
+
+#Load env vars
+~/.wmii-3.5/./env
+
+# Column Rules
+wmiir write /colrules <<!
+/9/ -> 60+40
+/5/ -> 80+20
+/2/ -> 65+35
+/3/ -> 66+34
+/gimp.*/ -> 15+70+15
+/.*/ -> 50+50
+!
+
+# Tagging Rules
+wmiir write /tagrules <<!
+/sakura.*/ -> 1
+/gimp.*/ -> ~+gimp
+/opera.*/ -> 2
+/emacs.*/ -> 3
+/Pidgin.*/ -> 5
+/ktorrent.*/ -> 6
+/KTorrent.*/ -> 6
+/pavucontrol.*/ -> 9
+/qmpdclient.*/ -> 9
+/ario.*/ -> 9
+/skype.*/ -> sk
+/SWT.*/ -> nil
+/XMMS.*/ -> ~
+/MPlayer.*/ -> ~
+/gpodder.*/ -> p
+
+/krunner.*/ -> ~
+/Plasma.*/ -> 0
+/ark:Ark:Extracting*/ -> ~
+
+
+/.*/ -> sel
+/.*/ -> 1
+!
+
+# Status Bar Info
+status() {
+#	echo -n $(uptime | sed 's/.*://; s/,//g') '|' $(date)
+    echo -n "<$(mpc | awk 'NR==1{printf "..%s", substr($0,length-48,49)}NR==2{printf " | %s",$3}NR==3{printf " | %s", $2}')> \
+$(df -h / /home | awk '$6=="/"{root=$4}$6=="/home"{home=$4}END{printf "/: %s /home: %s", root, home}') | \
+$(free -mt | awk '/buffers\/cache/{mem=$3}/Sw/{swap=$3}END{printf "mem: %sM swap: %sM", mem, swap}') | \
+$(sensors 2>/dev/null | awk '{sub("+","")}/MB Temp/{sys=$3} /CPU FAN/{fan=$4}END{printf "%s %srpm",sys,fan}') |\
+$(uptime | sed 's/.*://; s/,//g') | $(date +'%a %d %b %H:%M:%S') |"
+}
+
+# different helpful functions
+read_tags() {
+    echo `wmiir ls /tag | sed -e 's/\///' -e 's/sel//'`
+}
+
+next_tag() {
+    cur_tag=`wmiir read /tag/sel/ctl | head -n1`
+    flag=false
+    for i in $(read_tags) ; do
+	if $flag ; then
+	    echo $i
+	    return 0
+	else
+	    if [ $i = $cur_tag ] ; then
+		flag=true
+	    fi
+	fi
+    done
+    echo $(read_tags) | cut -d" " -f1
+}
+
+prev_tag() {
+    cur_tag=`wmiir read /tag/sel/ctl | head -n1`
+    tags=`echo $(read_tags) | tac -s" "`
+    flag=false
+    for i in $tags ; do
+	if $flag ; then
+	    echo $i
+	    return 0
+	else
+	    if [ $i = $cur_tag ] ; then
+		flag=true
+	    fi
+	fi
+    done
+    echo $tags | cut -d" " -f1
+}
+
+local_events() {
+	cat <<'!' #!
+    Key $MODKEY-Print
+            ksnapshot &
+        # MPD hotkeys
+	Key $MODKEY-F1
+	        mpc toggle &
+	Key $MODKEY-F2
+	        ~/bin/mpc_mute
+	Key $MODKEY-F3
+	        mpc volume +5 &
+	Key $MODKEY-F4
+	        mpc volume -5 &
+	Key $MODKEY-F5
+	        mpc next &
+	Key $MODKEY-F6
+	        mpc prev &
+	Key $MODKEY-F9
+	        mpc seek -10 &
+        Key $MODKEY-F10
+	        mpc seek +10 &
+	Key $MODKEY-F11
+	        mpc seek -60 & 
+	Key $MODKEY-F12 
+	        mpc seek +60 &
+        # toggle cd tray
+	Key $MODKEY-F8 
+	        eject -T /dev/sr0 &
+        # cycle through tags
+	Key $MODKEY-n
+	        wmiir xwrite /ctl view $(next_tag)
+	Key $MODKEY-b
+                wmiir xwrite /ctl view $(prev_tag)
+        # screenshot
+	Key Print
+	        ksnapshot &
+	# composite
+        Key $MODKEY-c
+	        if ! killall xcompmgr ; then
+		    composite &
+		fi
+        Key $MODKEY-/
+	        echo hello
+        # tag 0
+	Key $MODKEY-grave
+	        wmiir xwrite /ctl view "0"
+	Key $MODKEY-Shift-grave
+            wmiir xwrite /client/sel/tags "0"
+!
+}

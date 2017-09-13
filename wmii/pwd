@@ -1,0 +1,10 @@
+#!/bin/bash
+
+
+if [ $# -eq 1 ]; then
+	PWD=$1
+else
+	PWD="passphrase"
+fi
+
+echo $PWD | md5sum | md5sum | cut -c-32 | xclip
