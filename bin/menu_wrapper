@@ -1,8 +1,5 @@
 #!/bin/sh
 
-#FONT='-xos4-terminus-medium-*-normal-*-14-*-*-*-*-*-*-*'
-#FONT='Terminus-12:normal'
-FONT='xos4 Terminus-12:normal'
 MAX_AGE=3600
 PROGSFILE=/var/tmp/prog_names
 
@@ -18,7 +15,6 @@ if [ ! -f $PROGSFILE ] ; then
 	proglist $PATH >$PROGSFILE
 fi
 
-PROG=`dmenu  -fn "$FONT" -nf '#888888' -nb '#222222' -sf '#ffffff' -sb '#285577' < $PROGSFILE`
-$PROG &
+~/bin/dmenu_wrapper < $PROGSFILE
 
 ~/bin/update_progs_file &

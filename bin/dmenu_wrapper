@@ -1,0 +1,6 @@
+#!/bin/sh
+
+#FONT='-xos4-terminus-medium-*-normal-*-14-*-*-*-*-*-*-*'
+#FONT='Terminus-12:normal'
+FONT='xos4 Terminus-12:normal'
+dmenu  -fn "$FONT" -nf '#888888' -nb '#222222' -sf '#ffffff' -sb '#285577' $@
