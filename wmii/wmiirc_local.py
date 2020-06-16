@@ -5,6 +5,10 @@ from linecache import getline, checkcache
 import wmiirc
 from wmiirc import *
 
+from mpdctl import MPDWrapper
+
+mpd_controller = MPDWrapper()
+
 background = '#333333'
 floatbackground='#333333'
 
@@ -50,22 +54,43 @@ def get_free_space(path):
 	free_space = stats.f_bsize*stats.f_bavail/float(1024**3)
 	return path + ': ' + '{:.1f}'.format(free_space) + 'G'
 
+mem_cmd = ("free -mt | awk '/Mem/{mem=$3}/Swap/{swap=$3}END" +
+           "{printf \"mem: %sM swap: %sM\", mem, swap}'")
+cpu_cmd = ('sensors 2>/dev/null | awk \'{sub("+","")}/Tdie/{sys=$2} ' +
+           '/fan2/{fan=$2}END{printf "%s %srpm",sys,fan}\'')
+gpu_cmd = ('sensors 2>/dev/null | awk \'' +
+           '{sub("+","")}' +
+           '/fan1/{fan=$2}' +
+           '/edge/{temp=$2}' +
+           '/power1/{pow=$2}' +
+           'END{printf "%s %srpm %03dw", temp, fan, pow}\'')
+
+
 @defmonitor
 def a_mpd(self):
-        checkcache("/tmp/statusbar_data")
-        return wmii.cache['normcolors'], getline("/tmp/statusbar_data",2)
-        
+        return mpd_controller.current_song()
+
 @defmonitor
 def c_mem(self):
-	return wmii.cache['normcolors'], getline("/tmp/statusbar_data",1)
+        try:
+                return check_output(mem_cmd, shell=True)
+        except Exception as e:
+                print(e)
+                return 'ERR mem'
         
 @defmonitor
 def d_sensors(self):
-	return wmii.cache['normcolors'], getline("/tmp/statusbar_data",3)
+        cpu_temps = check_output(cpu_cmd, shell=True)
+        with open('/proc/cpuinfo') as f:
+                freq_lines = (x for x in f.readlines() if 'MHz' in x)
+                freqs = sorted(float(x.split()[3]) for x in freq_lines)
+
+	return wmii.cache['normcolors'], '{} {}mhz'.format(cpu_temps, int(freqs[0]))
 
 @defmonitor
 def f_radeon(self):
-        return wmii.cache['normcolors'], getline("/tmp/statusbar_data",4)
+        gpu_temps = check_output(gpu_cmd, shell=True)
+        return wmii.cache['normcolors'], gpu_temps
 
 @defmonitor
 def afree(self):
@@ -79,8 +104,11 @@ def time(self):
 @defmonitor
 def load(self):
         checkcache("/proc/loadavg")
-        avgs = ' '.join(getline("/proc/loadavg",1).split(' ')[:3])
+        avgs = ' '.join(getline("/proc/loadavg",1).split(' ')[:4])
         return wmii.cache['normcolors'], avgs
+
+def toggle_all_tags():
+        pass
 
 keys.bind('main', (
 	"MPD shortucts",

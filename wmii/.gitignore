@@ -1,2 +1,5 @@
 .ropeproject
 *.pyc
+history.actions
+history.progs
+history.tags
