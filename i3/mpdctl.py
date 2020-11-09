@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 #import traceback
 import functools
 import sys
@@ -48,15 +50,21 @@ class MPDWrapper:
         if not self.enabled: return 'MPD: disabled'
         song = self.client.currentsong()
         status = self.client.status()
-        elapsed = '{}:{:02}'.format(int(float(status['elapsed'])) // 60,
-                                    int(float(status['elapsed'])) % 60)
-        duration = '{}:{:02}'.format(int(float(status['duration'])) // 60,
-                                     int(float(status['duration'])) % 60)
-        return '{} - {} | {}/{} | {}%'.format(song['artist'],
-                                              song['title'],
-                                              elapsed,
-                                              duration,
-                                              status['volume'])
+        if not 'volume' in status:
+            status['volume'] = 'n/a'
+
+        if song:
+            elapsed = '{}:{:02}'.format(int(float(status['elapsed'])) // 60,
+                                        int(float(status['elapsed'])) % 60)
+            duration = '{}:{:02}'.format(int(float(status['duration'])) // 60,
+                                         int(float(status['duration'])) % 60)
+            return '{} - {} | {}/{} | {}%'.format(song['artist'],
+                                                  song['title'],
+                                                  elapsed,
+                                                  duration,
+                                                  status['volume'])
+        else:
+            return 'Stopped {}%'.format(status['volume'])
 
     @staticmethod
     def test():
@@ -65,3 +73,12 @@ class MPDWrapper:
         print(mpc.client.currentsong())
         print(mpc.client.config())
         print(mpc.current_song())
+
+
+if __name__ == '__main__':
+    command = sys.argv[1]
+    mpd = MPDWrapper()
+    try:
+        getattr(mpd.client, command)()
+    except Exception as e:
+        print('Tried command {} -- {}'.format(command, e))

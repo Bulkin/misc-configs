@@ -9,6 +9,8 @@ set $mod Mod4
 font pango:xos4 Terminus 12
 #font -xos4-terminus-medium-*-normal-*-16-*-*-*-*-*-*-*
 
+for_window [class=".*"]  title_format " %title"
+
 default_border          normal 2
 default_floating_border normal 2
 
@@ -38,13 +40,13 @@ bindsym $mod+Return exec i3-sensible-terminal
 bindsym $mod+Shift+c kill
 
 # start dmenu (a program launcher)
-bindsym $mod+p exec dmenu_run
-# There also is the (new) i3-dmenu-desktop which only displays applications
-# shipping a .desktop file. It is a wrapper around dmenu, so you need that
-# installed.
-# bindsym $mod+d exec --no-startup-id i3-dmenu-desktop
+#bindsym $mod+p exec dmenu_run
+bindsym $mod+p exec ~/bin/dmenu_wrapper run
 
-bindsym $mod+t exec ~/.config/i3/change-workspace.sh
+bindsym $mod+t       exec ~/.config/i3/change-workspace.sh
+bindsym $mod+Shift+t exec ~/.config/i3/change-workspace.sh m
+bindsym $mod+n workspace next
+bindsym $mod+b workspace prev
 
 # change focus
 bindsym $mod+h focus left
@@ -149,6 +151,13 @@ bindsym $mod+Shift+semicolon restart
 # exit i3 (logs you out of your X session)
 #bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
+#mpd control
+bindsym $mod+F1 exec mpc toggle
+bindsym $mod+F3 exec mpc volume +5
+bindsym $mod+F4 exec mpc volume -5
+bindsym $mod+F5 exec mpc next
+bindsym $mod+F6 exec mpc prev
+
 # resize window (you can also use the mouse for that)
 mode "resize" {
         # These bindings trigger as soon as you enter the resize mode
@@ -180,7 +189,7 @@ bindsym $mod+r mode "resize"
 # finds out, if available)
 bar {
     status_command ~/.config/i3/barstatus.py
-    separator_symbol "||"
+    separator_symbol "|||"
     colors {
         background #222222
         statusline #888888
@@ -193,3 +202,19 @@ bar {
         binding_mode       #2f343a #900000 #ffffff
     }
 }
+
+
+# window specific rules
+
+for_window [title="GIMP Startup"] move workspace "gimp"
+for_window [class="Gimp"] floating enable; move workspace "gimp"
+for_window [class="Gimp"] floating enable;
+#for_window [window_role="gimp-dock"] floating enable; move left; 
+#for_window [window_role="gimp-toolbox"] floating enable; move right;
+
+for_window [class="plasmashell"] move workspace $ws0
+for_window [class="Firefox"] move workspace $ws2
+for_window [class="Emacs"] move workspace $ws3
+for_window [class="pidgin"] move workspace $ws5
+for_window [class="pavucontrol"] move workspace $ws9
+for_window [class="kmail"] move workspace "m"
