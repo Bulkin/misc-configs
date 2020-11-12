@@ -50,6 +50,12 @@ class MPDWrapper:
         if not self.enabled: return 'MPD: disabled'
         song = self.client.currentsong()
         status = self.client.status()
+
+        if {'artist', 'title'} <= song.keys():
+            song_fmt = '{} - {}'.format(song['artist'], song['title'])
+        else:
+            song_fmt = song['file']
+
         if not 'volume' in status:
             status['volume'] = 'n/a'
 
@@ -58,11 +64,10 @@ class MPDWrapper:
                                         int(float(status['elapsed'])) % 60)
             duration = '{}:{:02}'.format(int(float(status['duration'])) // 60,
                                          int(float(status['duration'])) % 60)
-            return '{} - {} | {}/{} | {}%'.format(song['artist'],
-                                                  song['title'],
-                                                  elapsed,
-                                                  duration,
-                                                  status['volume'])
+            return '{} | {}/{} | {}%'.format(song_fmt,
+                                             elapsed,
+                                             duration,
+                                             status['volume'])
         else:
             return 'Stopped {}%'.format(status['volume'])
 
