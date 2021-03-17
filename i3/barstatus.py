@@ -18,7 +18,15 @@ statusbar_contents = {
 }
 
 def defmonitor(func):
-    statusbar_contents[func.__name__] = func
+    name = func.__name__
+    def wrapper(f):
+        def checked_exec():
+            try:
+                return f()
+            except:
+                return f'{name}: ERR'
+        return checked_exec
+    statusbar_contents[name] = wrapper(func)
     return func
 
 def defmonitor_opt(func):
@@ -38,6 +46,7 @@ def load():
 @defmonitor
 def lm_sensors():
     feature_labels = {'Tdie', 'fan2', 'Vcore', 'Icore',  # cpu
+                      'SVI2_P_Core',                     # zenpower
                       'fan1', 'edge', 'power1'}          # gpu
     features = {}
     for chip in sensors.iter_detected_chips():
@@ -46,7 +55,12 @@ def lm_sensors():
                 features[feature.label] = feature.get_value()
 
     features['cpufreq'] = psutil.cpu_freq()[0] / 1000
-    features['cpupow'] = features['Vcore'] * features['Icore']
+    if 'Vcore' in features and 'Icore' in features:
+        features['cpupow'] = features['Vcore'] * features['Icore']
+    elif 'SVI2_P_Core' in features:
+        features['cpupow'] = features['SVI2_P_Core']
+    else:
+        features['cpupow'] = 0
     cpu = '{Tdie:.1f}°C {fan2:.0f}rpm {cpufreq:.1f}GHz {cpupow:03.0f}w'.format(**features)
     gpu = '{edge:.0f}°C {fan1:.0f}rpm {power1:.0f}w'.format(**features)
     return ' | '.join((cpu, gpu))

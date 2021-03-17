@@ -29,6 +29,7 @@ def retry(fun, count=3):
 
 class MPDWrapper:
     def __init__(self, host='/var/lib/mpd/socket', port=None):
+        self.last_volume = 'n/a'
         try:
             self.addr = (host, port)
             self.connect()
@@ -51,15 +52,21 @@ class MPDWrapper:
         song = self.client.currentsong()
         status = self.client.status()
 
-        if {'artist', 'title'} <= song.keys():
-            song_fmt = '{} - {}'.format(song['artist'], song['title'])
-        else:
-            song_fmt = song['file']
-
         if not 'volume' in status:
-            status['volume'] = 'n/a'
+            status['volume'] = self.last_volume
+        else:
+            self.last_volume = status['volume']
+
+        if not 'elapsed' in status:
+            status['elapsed'] = 0.0
+            status['duration'] = 0.0
 
         if song:
+            if {'artist', 'title'} <= song.keys():
+                song_fmt = '{} - {}'.format(song['artist'], song['title'])
+            else:
+                song_fmt = song['file']
+
             elapsed = '{}:{:02}'.format(int(float(status['elapsed'])) // 60,
                                         int(float(status['elapsed'])) % 60)
             duration = '{}:{:02}'.format(int(float(status['duration'])) // 60,

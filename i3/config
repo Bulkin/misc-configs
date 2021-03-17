@@ -206,15 +206,13 @@ bar {
 
 # window specific rules
 
-for_window [title="GIMP Startup"] move workspace "gimp"
-for_window [class="Gimp"] floating enable; move workspace "gimp"
-for_window [class="Gimp"] floating enable;
-#for_window [window_role="gimp-dock"] floating enable; move left; 
-#for_window [window_role="gimp-toolbox"] floating enable; move right;
+for_window [class="Gimp"] move workspace "gimp"
+for_window [class="Gimp"] floating enable
+#for_window [title="GNU Image Manipulation Program"] floating disable
 
 for_window [class="plasmashell"] move workspace $ws0
 for_window [class="Firefox"] move workspace $ws2
 for_window [class="Emacs"] move workspace $ws3
-for_window [class="pidgin"] move workspace $ws5
-for_window [class="pavucontrol"] move workspace $ws9
+for_window [class="Pidgin"] move workspace $ws5
+for_window [class="Pavucontrol"] move workspace $ws9
 for_window [class="kmail"] move workspace "m"
