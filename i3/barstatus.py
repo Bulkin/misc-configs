@@ -39,29 +39,33 @@ def defmonitor_opt(func):
 
 @defmonitor
 def load():
-    with open("/proc/loadavg") as f:
-        avgs = ' '.join(f.read().split()[:4])
-        return avgs
+    vals = psutil.getloadavg()
+    return ' '.join(['{:>5.2f}'] * len(vals)).format(*vals)
 
 @defmonitor
 def lm_sensors():
+    from statistics import mean
     feature_labels = {'Tdie', 'fan2', 'Vcore', 'Icore',  # cpu
-                      'SVI2_P_Core',                     # zenpower
+                      'SVI2_P_Core', 'SVI2_P_SoC',       # zenpower
                       'fan1', 'edge', 'power1'}          # gpu
     features = {}
     for chip in sensors.iter_detected_chips():
         for feature in chip:
-            if feature.label in feature_labels:
+            if (feature.label in feature_labels and
+                not features.get(feature.label, 0)):
                 features[feature.label] = feature.get_value()
 
-    features['cpufreq'] = psutil.cpu_freq()[0] / 1000
+    cpu_freqs = [ f[0] / 1000 for f in psutil.cpu_freq(True) ]
+    features['cpufreq_avg'] = mean(cpu_freqs)
+    features['cpufreq_max'] = max(cpu_freqs)
+
     if 'Vcore' in features and 'Icore' in features:
         features['cpupow'] = features['Vcore'] * features['Icore']
-    elif 'SVI2_P_Core' in features:
-        features['cpupow'] = features['SVI2_P_Core']
+    elif 'SVI2_P_Core' in features and 'SVI2_P_SoC' in features:
+        features['cpupow'] = features['SVI2_P_Core'] + features['SVI2_P_SoC']
     else:
         features['cpupow'] = 0
-    cpu = '{Tdie:.1f}°C {fan2:.0f}rpm {cpufreq:.1f}GHz {cpupow:03.0f}w'.format(**features)
+    cpu = '{Tdie:.1f}°C {fan2:.0f}rpm {cpufreq_max:.2f}GHz {cpufreq_avg:.2f}GHz {cpupow:03.0f}w'.format(**features)
     gpu = '{edge:.0f}°C {fan1:.0f}rpm {power1:.0f}w'.format(**features)
     return ' | '.join((cpu, gpu))
 
