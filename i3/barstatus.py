@@ -10,6 +10,7 @@ import sys
 import time
 
 from math import floor,ceil
+from subprocess import check_output
 
 import mpdctl
 
@@ -65,7 +66,7 @@ def lm_sensors():
         features['cpupow'] = features['SVI2_P_Core'] + features['SVI2_P_SoC']
     else:
         features['cpupow'] = 0
-    cpu = '{Tdie:.1f}°C {fan2:.0f}rpm {cpufreq_max:.2f}GHz {cpufreq_avg:.2f}GHz {cpupow:03.0f}w'.format(**features)
+    cpu = '{Tdie:.1f}°C {fan2:>4.0f}rpm {cpufreq_max:.2f}GHz {cpufreq_avg:.2f}GHz {cpupow:03.0f}w'.format(**features)
     gpu = '{edge:.0f}°C {fan1:.0f}rpm {power1:.0f}w'.format(**features)
     return ' | '.join((cpu, gpu))
 
@@ -88,9 +89,40 @@ def disk():
 
 mpd = mpdctl.MPDWrapper()
 
-@defmonitor
+#@defmonitor
 def mpd_status():
     return mpd.current_song()
+
+def playerctl(cmd):
+    return check_output(['playerctl',
+                         '-i', 'firefox,chromium', # plasma-integration instead
+                         cmd ],
+                        text=True)
+
+@defmonitor
+def mpris2_playerctl():
+    metadata = playerctl('metadata').split('\n')
+    metadata = { e[1]: ' '.join(e[2:]) for entry in metadata
+                 if (e := entry.split()) }
+    vol = int(float(playerctl('volume')) * 100)
+    res = ['']
+    if 'xesam:artist' in metadata:
+        res[-1] += metadata['xesam:artist'] + ' - '
+    if 'xesam:title' in metadata:
+        res[-1] += metadata['xesam:title']
+    if 'mpris:length' in metadata:
+        l = int(metadata['mpris:length']) // 1000000
+        duration = f'{l//60}:{l%60:02}'
+        pos = int(float(playerctl('position')))
+        elapsed = f'{pos//60}:{pos%60:02}'
+        res.append(f'{elapsed}/{duration}')
+    else:
+        res.append(playerctl('status')[:-1])
+
+    vol = int(float(playerctl('volume')) * 100)
+    res.append(f'{vol}%')
+
+    return ' | '.join(res)
 
 @defmonitor
 def status_delay():

@@ -152,12 +152,19 @@ bindsym $mod+Shift+semicolon restart
 #bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
 #mpd control
-bindsym $mod+F1 exec mpc toggle
-bindsym $mod+F2 exec playerctl play-pause #~/bin/pulse_mute
-bindsym $mod+F3 exec mpc volume +5
-bindsym $mod+F4 exec mpc volume -5
-bindsym $mod+F5 exec mpc next
-bindsym $mod+F6 exec mpc prev
+# bindsym $mod+F1 exec mpc toggle
+# bindsym $mod+F2 exec playerctl play-pause #~/bin/pulse_mute
+# bindsym $mod+F3 exec mpc volume +5
+# bindsym $mod+F4 exec mpc volume -5
+# bindsym $mod+F5 exec mpc next
+# bindsym $mod+F6 exec mpc prev
+
+bindsym $mod+F1 exec playerctl play-pause
+bindsym $mod+F2 exec ~/bin/mpris-switch-player.sh
+bindsym $mod+F3 exec playerctl volume 0.05+
+bindsym $mod+F4 exec playerctl volume 0.05-
+bindsym $mod+F5 exec playerctl next
+bindsym $mod+F6 exec playerctl previous
 
 # resize window (you can also use the mouse for that)
 mode "resize" {
