@@ -56,7 +56,7 @@ def lm_sensors():
                 not features.get(feature.label, 0)):
                 features[feature.label] = feature.get_value()
 
-    cpu_freqs = [ f[0] / 1000 for f in psutil.cpu_freq(True) ]
+    cpu_freqs = [ f[0] for f in psutil.cpu_freq(True) ]
     features['cpufreq_avg'] = mean(cpu_freqs)
     features['cpufreq_max'] = max(cpu_freqs)
 
