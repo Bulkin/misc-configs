@@ -7,9 +7,11 @@ import json
 import psutil
 import sensors
 import sys
+import threading
 import time
 
 from math import floor,ceil
+from pathlib import Path
 from subprocess import check_output
 
 import mpdctl
@@ -18,25 +20,49 @@ statusbar_contents = {
     'time' : lambda: datetime.datetime.now().strftime('%a %d %b %H:%M:%S '),
 }
 
-def defmonitor(func):
+slow_vals = {}
+slow_funcs = []
+
+def slow_thread_worker():
+    while True:
+        for f in slow_funcs:
+            f()
+        time.sleep(60)
+
+def defmonitor(func=None, optional=False, slow=False):
+    if func is None:
+        return lambda f: defmonitor(f, optional, slow)
     name = func.__name__
     def wrapper(f):
         def checked_exec():
             try:
-                return f()
+                if slow:
+                    res = slow_vals[name]
+                else:
+                    res = f()
             except:
-                return f'{name}: ERR'
+                if optional:
+                    res = ''
+                else:
+                    res = f'{name}: ERR'
+            return res
         return checked_exec
-    statusbar_contents[name] = wrapper(func)
-    return func
 
-def defmonitor_opt(func):
-    def wrapper():
-        try:
-            return func()
-        except:
-            return ''
-    return defmonitor(wrapper)
+    def slow_wrapper(f):
+        def checked_exec():
+            try:
+                res = f()
+            except:
+                if optional:
+                    res = ''
+                else:
+                    res = f'{name}: ERR'
+            slow_vals[name] = res
+        return checked_exec
+
+    statusbar_contents[name] = wrapper(func)
+    if slow: slow_funcs.append(slow_wrapper(func))
+    return func
 
 @defmonitor
 def load():
@@ -48,7 +74,7 @@ def lm_sensors():
     from statistics import mean
     feature_labels = {'Tdie', 'fan2', 'Vcore', 'Icore',  # cpu
                       'SVI2_P_Core', 'SVI2_P_SoC',       # zenpower
-                      'fan1', 'edge', 'power1'}          # gpu
+                      'fan1', 'edge', 'power1', 'PPT' }  # gpu
     features = {}
     for chip in sensors.iter_detected_chips():
         for feature in chip:
@@ -57,8 +83,8 @@ def lm_sensors():
                 features[feature.label] = feature.get_value()
 
     cpu_freqs = [ f[0] for f in psutil.cpu_freq(True) ]
-    features['cpufreq_avg'] = mean(cpu_freqs)
-    features['cpufreq_max'] = max(cpu_freqs)
+    features['cpufreq_avg'] = mean(cpu_freqs) / 1000
+    features['cpufreq_max'] = max(cpu_freqs) / 1000
 
     if 'Vcore' in features and 'Icore' in features:
         features['cpupow'] = features['Vcore'] * features['Icore']
@@ -67,14 +93,31 @@ def lm_sensors():
     else:
         features['cpupow'] = 0
     cpu = '{Tdie:.1f}°C {fan2:>4.0f}rpm {cpufreq_max:.2f}GHz {cpufreq_avg:.2f}GHz {cpupow:03.0f}w'.format(**features)
-    gpu = '{edge:.0f}°C {fan1:.0f}rpm {power1:.0f}w'.format(**features)
+    gpu = '{edge:.0f}°C {fan1:.0f}rpm {PPT:>2.0f}w'.format(**features)
     return ' | '.join((cpu, gpu))
 
-@defmonitor_opt
+@defmonitor(optional=True, slow=False)
 def controller_bat():
-    path = '/sys/class/power_supply/sony_controller_battery_70:20:84:5d:1b:0e/capacity'
-    with open(path) as f:
-        return 'CBAT: {}%'.format(int(f.read()))
+    path = Path('/sys/class/power_supply/')
+    prefix = sorted(path.glob('ps-controller-battery-*'))[0]
+    bat = int((prefix / 'capacity').read_text())
+    return f'CBAT: {bat}%'
+
+@defmonitor(optional=False, slow=True)
+def mouse_bat():
+    # TODO*: write to proper path (power_supply) in driver
+    path = Path('/sys/module/razermouse/drivers/hid:razermouse')
+    prefix = sorted(path.glob("*:*:*.*"))[0]
+    bat = int((prefix / 'charge_level').read_text()) * 100 // 255
+    charging = int((prefix / 'charge_status').read_text())
+    # path = Path('/sys/class/power_supply/razermouse_battery_0')
+    # bat = int((path / 'capacity').read_text())
+    # charging = not (path / 'status').read_text().startswith('Discharging')
+    warn = (charging and bat > 90) or (not charging and bat < 30)
+    return {
+        'full_text': f'MBAT: {bat}%',
+        'color': '#bb55000' if warn else None,
+    }
 
 @defmonitor
 def mem():
@@ -111,7 +154,8 @@ def mpris2_playerctl():
     if 'xesam:title' in metadata:
         res[-1] += metadata['xesam:title']
     if 'mpris:length' in metadata:
-        l = int(metadata['mpris:length']) // 1000000
+        # playerctl sometimes reports floats for some reason
+        l = int(metadata['mpris:length'].split('.')[0]) // 1000000
         duration = f'{l//60}:{l%60:02}'
         pos = int(float(playerctl('position')))
         elapsed = f'{pos//60}:{pos%60:02}'
@@ -130,14 +174,25 @@ def status_delay():
     return 'delay: {:.3f}s'.format(t - floor(t))
 
 def encode(entry_func):
-    return { 'name' : entry_func[0], 'full_text' : entry_func[1] }
+    res = { 'name' : entry_func[0] }
+    if type(entry_func[1]) is str:
+        res['full_text'] = entry_func[1]
+    else:
+        res.update(entry_func[1])
+    return res
 
 def print_once():
     values = ((n, f()) for n, f in  statusbar_contents.items())
     entries = reversed([encode(f) for f in values if f[1]])
     print(json.dumps(list(entries)), ',', flush=True)
 
+def stdin_worker():
+    while txt := sys.stdin.read():
+        ev = json.loads(txt)
+
 def main():
+    slow_thread = threading.Thread(target=slow_thread_worker)
+    slow_thread.start()
     print(sys.argv[0], file=sys.stderr)
     print('{ "version": 1 }')
     print('[')
